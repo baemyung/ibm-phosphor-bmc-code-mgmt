@@ -94,6 +94,31 @@ void Activation::unsubscribeFromSystemdSignals()
     return;
 }
 
+inline bool assumeFieldModeEnabledOnly()
+{
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabledOnly .....");
+
+     std::error_code ec;
+     if (std::filesystem::exists("/tmp/assume_fieldmode"))
+     {
+         error("TEST:TEST: assumeFieldModeEnabledOnly  ON.....");
+        return true;
+     }
+     error("TEST:TEST: assumeFieldModeEnabledOnly  OFF.....");
+     return false;
+}
+
+inline bool assumeFieldModeEnabled(Activation& activation)
+{
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabled.....");
+    if(assumeFieldModeEnabledOnly())
+    {
+        return true;
+    }
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabled test the actual fieldModeEnabled.....");
+     return activation.parent.control::FieldMode::fieldModeEnabled();
+}
+
 auto Activation::activation(Activations value) -> Activations
 {
     if ((value != softwareServer::Activation::Activations::Active) &&
@@ -137,25 +162,42 @@ auto Activation::activation(Activations value) -> Activations
                 buildID = buildID.substr(pos);
             }
 
+            error("TEST:TEST: manifestPath={MPATH}", "MPATH", manifestPath.string());
+            error("TEST:TEST: versionId={VID}, VersionId={VVID}, currVersion={CVID}, buildID={BID}", 
+                    "VID", versionId, "VVID", versionID, "CVID", currVersion, "BID", buildID);
+
             updateAccessKey.sync();
 
             try
             {
+                 error("TEST:TEST: activation - Try updateAccessKey.verify");
+
                 if (!updateAccessKey.verify(buildID, currVersion, isOneOff))
                 {
+                   error("TEST:TEST: activation - Try updateAccessKey.verify returns false");
                     utils::createBmcDump(bus);
-                    if (parent.control::FieldMode::fieldModeEnabled())
+                    if (assumeFieldModeEnabled(*this))
                     {
                         return softwareServer::Activation::activation(
                             softwareServer::Activation::Activations::Failed);
                     }
                 }
+                else if(assumeFieldModeEnabledOnly())
+                {
+                     error("TEST:TEST: ASSUME !!! Assume f and cause the fake failure");
+                    //elog<InternalFailure>();
+                    elog<NotAllowed>(xyz::openbmc_project::Common::NotAllowed::REASON( "AssumeFieldMode and failure"));
+                    utils::createBmcDump(bus);
+                     return softwareServer::Activation::activation(
+                            softwareServer::Activation::Activations::Failed);
+                }
             }
             catch (AccessKeyErr& e)
             {
+                   error("TEST:TEST: activation - Try updateAccessKey.verify throws an exception");
                 commit<AccessKeyErr>();
                 utils::createBmcDump(bus);
-                if (parent.control::FieldMode::fieldModeEnabled())
+                if (assumeFieldModeEnabled(*this))
                 {
                     return softwareServer::Activation::activation(
                         softwareServer::Activation::Activations::Failed);
@@ -173,7 +215,7 @@ auto Activation::activation(Activations value) -> Activations
             report<InvalidSignatureErr>();
             utils::createBmcDump(bus);
             // Stop the activation process, if fieldMode is enabled.
-            if (parent.control::FieldMode::fieldModeEnabled())
+            if (assumeFieldModeEnabled(*this))
             {
                 return softwareServer::Activation::activation(
                     softwareServer::Activation::Activations::Failed);

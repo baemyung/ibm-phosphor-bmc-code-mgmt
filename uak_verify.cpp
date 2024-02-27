@@ -113,7 +113,7 @@ bool UpdateAccessKey::checkIfUAKValid(const std::string& buildID)
             return true;
         }
         error(
-            "Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
+            "TEST:TEST: checkIfUAKValid - Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
             "Build date: {BUILD_ID}.",
             "EXP_DATE", expirationDate, "BUILD_ID", buildIDTrunc);
         return false;
@@ -121,7 +121,7 @@ bool UpdateAccessKey::checkIfUAKValid(const std::string& buildID)
     catch (...)
     {
         error(
-            "Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
+            "TEST:TEST: checkIfUAKValid2 - Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
             "Build date: {BUILD_ID}.",
             "EXP_DATE", expirationDate, "BUILD_ID", buildIDTrunc);
         return false;
@@ -136,10 +136,13 @@ bool UpdateAccessKey::verify(const std::string& gaDate,
 
     if (!checkIfUAKValid(buildID))
     {
+        error("TEST:TEST: verify1 - !checkIfUAKValid() checking version");
+
         try
         {
             if (version.empty())
             {
+                error("TEST:TEST: verify2 - !checkIfUAKValid() but version is empty");
                 return false;
             }
             std::string versionID =
@@ -167,12 +170,13 @@ bool UpdateAccessKey::verify(const std::string& gaDate,
                  (targetMinorVersionX <= currentMinorVersionX)) ||
                 isOneOff || (targetMajorVersion < currentMajorVersion))
             {
+                error("TEST:TEST: verify3 - !checkIfUAKValid() version is good");
                 return true;
             }
             else
             {
                 error(
-                    "Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
+                    "TEST:TEST:  verify - Update Access Key validation failed. Expiration Date: {EXP_DATE}. "
                     "Build date: {BUILD_ID}.",
                     "EXP_DATE", expirationDate, "BUILD_ID", buildIDTrunc);
                 elog<AccessKeyErr>(
