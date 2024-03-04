@@ -34,6 +34,7 @@ using namespace phosphor::logging;
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
 
+
 #ifdef WANT_SIGNATURE_VERIFY
 namespace control = sdbusplus::server::xyz::openbmc_project::control;
 #endif
@@ -80,6 +81,31 @@ void Activation::unsubscribeFromSystemdSignals()
     return;
 }
 
+inline bool assumeFieldModeEnabledOnly()
+{
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabledOnly .....");
+
+     std::error_code ec;
+     if (std::filesystem::exists("/tmp/assume_fieldmode"))
+     {
+         error("TEST:TEST: assumeFieldModeEnabledOnly  ON.....");
+        return true;
+     }
+     error("TEST:TEST: assumeFieldModeEnabledOnly  OFF.....");
+     return false;
+}
+
+inline bool assumeFieldModeEnabled(Activation& activation)
+{
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabled.....");
+    if(assumeFieldModeEnabledOnly())
+    {
+        return true;
+    }
+    error("TEST:TEST:TEST Testing assumeFieldModeEnabled test the actual fieldModeEnabled.....");
+     return activation.parent.control::FieldMode::fieldModeEnabled();
+}
+
 auto Activation::activation(Activations value) -> Activations
 {
     if ((value != softwareServer::Activation::Activations::Active) &&
@@ -98,7 +124,7 @@ auto Activation::activation(Activations value) -> Activations
                 Software::Version::Error::InvalidSignature;
             report<InvalidSignatureErr>();
             // Stop the activation process, if fieldMode is enabled.
-            if (parent.control::FieldMode::fieldModeEnabled())
+            if (assumeFieldModeEnabled(*this))
             {
                 return softwareServer::Activation::activation(
                     softwareServer::Activation::Activations::Failed);
@@ -113,6 +139,20 @@ auto Activation::activation(Activations value) -> Activations
             return softwareServer::Activation::activation(
                 softwareServer::Activation::Activations::Failed);
         }
+
+        if(assumeFieldModeEnabledOnly())
+        {
+
+            error("TEST:TEST: ASSUME !!! Assume f and cause the fake failure");
+                    //elog<InternalFailure>();
+            using InvalidSignatureErr = sdbusplus::xyz::openbmc_project::
+                Software::Version::Error::InvalidSignature;
+            report<InvalidSignatureErr>();
+
+            return softwareServer::Activation::activation(
+                            softwareServer::Activation::Activations::Failed);
+        }
+
 
         if (!activationProgress)
         {
